@@ -1,0 +1,22 @@
+#!/bin/sh
+# Runs after the upstream defaults. No subscriptions or credentials are embedded.
+set -eu
+uci set openclash.config.enable='0'
+uci set openclash.config.core_type='Meta'
+uci set openclash.config.smart_enable='0'
+uci set nikki.config.enabled='0'
+uci set passwall.@global[0].enabled='0'
+uci commit openclash
+uci commit nikki
+uci commit passwall
+
+# Copy, never symlink: an OpenClash core update must not overwrite Nikki's core.
+mkdir -p /etc/openclash/core
+if [ ! -s /etc/openclash/core/clash_meta ]; then
+    cp /usr/libexec/mihomo /etc/openclash/core/clash_meta
+    chmod 0755 /etc/openclash/core/clash_meta
+fi
+for service in passwall openclash nikki; do
+    /etc/init.d/"$service" disable
+done
+exit 0
