@@ -1,0 +1,101 @@
+name: Build iStoreOS x86_64 with proxy plugins
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build.yml'
+      - 'configs/**'
+      - 'files/**'
+      - 'scripts/**'
+      - 'sources.lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      FORCE_UNSAFE_CONFIGURE: '1'
+      TZ: UTC
+      GOAMD64: v1
+    steps:
+      - name: Checkout build configuration
+        uses: actions/checkout@v4
+
+      - name: Prepare Linux build environment
+        run: |
+          # Only remove preinstalled SDKs on this disposable hosted runner.
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/share/swift
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
+            python3 python3-setuptools python3-pyelftools rsync swig unzip zlib1g-dev \
+            file wget curl ca-certificates ccache patch perl time \
+            libelf-dev dwarves liblzma-dev libzstd-dev libfuse-dev \
+            xsltproc docbook-utils help2man libtool autoconf automake \
+            gperf pkgconf xz-utils zstd qemu-utils squashfs-tools fdisk \
+            genisoimage dosfstools mtools \
+            nodejs npm
+          df -h "$GITHUB_WORKSPACE"
+
+      - name: Fetch pinned sources and verify package selection
+        run: python3 scripts/prepare.py
+
+      - name: Restore downloaded source archives
+        uses: actions/cache@v4
+        with:
+          path: work/istoreos/dl
+          key: istoreos-dl-${{ runner.os }}-${{ hashFiles('sources.lock.json', 'configs/**') }}
+          restore-keys: istoreos-dl-${{ runner.os }}-
+
+      - name: Download sources
+        working-directory: work/istoreos
+        run: |
+          set -o pipefail
+          make download -j8 V=s 2>&1 | tee "$GITHUB_WORKSPACE/outputs/download.log"
+
+      - name: Build BIOS and UEFI images
+        working-directory: work/istoreos
+        run: |
+          set -o pipefail
+          make -j"$(nproc)" V=s 2>&1 | tee "$GITHUB_WORKSPACE/outputs/build.log"
+
+      - name: Verify firmware contents
+        run: python3 scripts/verify.py
+
+      - name: Upload verified firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: istoreos-x86_64-passwall-openclash-nikki-${{ github.run_number }}
+          path: |
+            outputs/*.img.gz
+            outputs/*.manifest
+            outputs/sha256sums
+            outputs/VALIDATION.txt
+            outputs/build.config
+            outputs/sources.lock.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-diagnostics-${{ github.run_number }}
+          path: |
+            outputs/*.log
+            outputs/build.config
+            work/istoreos/logs/
+            work/istoreos/.config
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
