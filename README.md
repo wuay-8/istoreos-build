@@ -36,7 +36,7 @@
 
 `sources.lock.json` 固定 iStoreOS、插件和软件源的 Git 提交。`configs/official.config` 是 2026-09-14 获取的官方配置快照；`configs/custom.config` 是定制项。仅编译固件需要的包，去掉官方配置中用于软件仓库发布的 `m` 包和全量内核模块构建。
 
-iStoreOS 24.10 软件源的 Go 1.23 无法编译当前 Sing-box；构建时仅替换 `packages/lang/golang` 子目录，使用固定提交的 Go 1.26 兼容打包脚本，其余基础软件源保持不变。
+iStoreOS 24.10 软件源的 Go 1.23 无法编译当前代理核心（Xray 26.9.9 要求 Go 1.27）；构建时仅替换 `packages/lang/golang` 子目录，使用固定提交的 Go 1.27.1 兼容打包脚本，其余基础软件源保持不变。
 
 构建前会检查 Kconfig 是否丢弃必需选项；构建后检查两种镜像的分区表、SquashFS、软件包清单、代理核心的 x86_64 ELF 格式，以及首次启动脚本。验证失败不会上传固件 artifact，只保留诊断日志。
 
@@ -66,6 +66,6 @@ python3 scripts/verify.py
 - [PassWall 核心包](https://github.com/Openwrt-Passwall/openwrt-passwall-packages)
 - [OpenClash](https://github.com/vernesong/OpenClash)
 - [Nikki](https://github.com/nikkinikki-org/OpenWrt-nikki)
-- [Go 工具链打包脚本](https://github.com/sbwml/packages_lang_golang/tree/26.x)
+- [Go 工具链打包脚本](https://github.com/sbwml/packages_lang_golang/tree/27.x)
 
 上游软件各自保留其许可证；构建产物会附软件清单和源码提交记录。

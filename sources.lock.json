@@ -104,8 +104,8 @@
   {
     "name": "golang_toolchain",
     "url": "https://github.com/sbwml/packages_lang_golang.git",
-    "branch": "26.x",
-    "commit": "bdad5443d147343ea6e497f91ed8bee0d97f8996",
+    "branch": "27.x",
+    "commit": "c912b45f02ec65c2b21419564e6c631acdbe7e8d",
     "role": "golang-overlay"
   }
 ]
